@@ -30,7 +30,6 @@ parser.add_argument('-d', '--days', type=str, default='1', help='1 7 30 90 180 3
 #
 parser.add_argument("--random_seed", type=float, default=42)
 parser.add_argument('--num_oov', type=int, default=2000)
-# parser.add_argument('--re_idxing_data', type='bool', default=True)
 parser.add_argument('--re_sample_test', type='bool', default=False)
 parser.add_argument('--train_neg_num', type=int, default=50)
 parser.add_argument('--test_neg_num', type=int, default=100)
@@ -39,19 +38,15 @@ parser.add_argument('--max_contexts', type=int, default=1000, help='max contexts
 parser.add_argument('--context_gamma', type=float, default=0.3)
 
 # model parameters
-# parser.add_argument("--max_char_len", type=int, default=100)
 parser.add_argument('--ngram_embed_dim', type=int, default=100)
 parser.add_argument('--n_grams', type=str, default='2, 3, 4')
-# parser.add_argument("--char_embed_dim", type=int, default=100, help="embedding dimention for character")
 parser.add_argument("--word_embed_dim", type=int, default=100, help="embedding dimention for word")
 parser.add_argument('--node_embed_dim', type=int, default=128)
-# parser.add_argument("--feature_maps", type=str, default='50, 100,150,200,200', help="number of kernels")
-# parser.add_argument("--kernal_sizes", type=str, default='1,2,3,4,5', help="kernal sizes seperaed by comma")
 parser.add_argument("--dropout", type=float, default=0, help="size of testing set")
 parser.add_argument('--bi_out_dim', type=int, default=50, help='dim for the last bilinear layer for output')
 
 parser.add_argument("--num_epochs", type=int, default=30, help="number of epochs for training")
-parser.add_argument("--log_interval", type=int, default=2000, help='step interval for log')
+parser.add_argument("--log_interval", type=int, default=100, help='step interval for log')
 parser.add_argument("--test_interval", type=int, default=1, help='epoch interval for testing')
 parser.add_argument("--early_stop_epochs", type=int, default=10)
 parser.add_argument("--metric", type=str, default='map', help='mrr or map')
@@ -59,15 +54,10 @@ parser.add_argument('--learning_rate', type=float, default=0.0001)
 parser.add_argument('--min_epochs', type=int, default=50, help='minimum number of epochs')
 parser.add_argument('--clip_grad', type=float, default=5.0)
 parser.add_argument('--lr_decay', type=float, default=0.05, help='decay ratio of learning rate')
+
 # model selection
-# parser.add_argument('--rank_encoder', type=str, default='cnn', help='cnn; ngram; lstm; hier, ...')
-# parser.add_argument('--pred_encoder', type=str, default='cnn', help='cnn; ngram; lstm; hier, ...')
-# parser.add_argument('--re_use_encoder', type='bool', default=False)
-parser.add_argument('--use_context', type='bool', default=False)
-# parser.add_argument('--use_pred_query', type='bool', default=True)
-# parser.add_argument('--use_pred_cand', type='bool', default=True)
-# parser.add_argument('--do_ctx_interact', type='bool', default=False)
-# parser.add_argument('--only_contexts', type='bool', default=False)
+parser.add_argument('--use_context', type='bool', default=True)
+parser.add_argument('--do_ctx_interact', type='bool', default=True)
 
 # path to external files
 parser.add_argument("--embed_filename", type=str, default='../data/embeddings/glove.6B.100d.txt')
@@ -83,9 +73,6 @@ parser.add_argument('--restore_model_epoch', type=int, default=600)
 parser.add_argument("--save_best", type='bool', default=False, help='save model in the best epoch or not')
 parser.add_argument("--save_dir", type=str, default='./saved_models', help='save model in the best epoch or not')
 parser.add_argument("--save_interval", type=int, default=5, help='intervals for saving models')
-
-# parser.add_argument('--context_pooling', type=str, default='max; mean')
-# parser.add_argument('--interact_method', type=str, default='dot_prod; cos_sim; mat_mul')
 
 parser.add_argument('--train_single', type='bool')
 parser.add_argument('--normalize', type='bool', default=False)
