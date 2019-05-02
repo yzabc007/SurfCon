@@ -4,12 +4,22 @@ Implementation of SurfCon model for Paper "[SurfCon: Synonym Discovery on Privac
 ## 1. Introduction
 This repository is the implementation for the SurfCon model which utilizes the surface form and global context information to mine synonyms for medical terms extracted from Electronic Medical Records (EMRs).
 
+SurfCon model consists of two components.
+
 ## 2. Dataset
 The dataset used in current experiments contains medical term-term co-occurrence graphs extracted from EMRs. The dataset can be downloaded from the original paper, [Building the graph of medicine from millions of clinical narratives](https://datadryad.org/resource/doi:10.5061/dryad.jp917)
 
 There are some inputs that need to be prepared before running. 
 
+Our model and problem setting can be extended to any other text corpus with the privacy concerns as long as a co-occurrence graph is provided.
+
 ## 3. Run
+
+Testing
+
+Training the final ranking model
+
+Training the inductive context prediction model
 
 ## 4. Citation
 ```
