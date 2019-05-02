@@ -15,8 +15,7 @@ There are some inputs that need to be prepared before running.
 ```
 @inproceedings{wang2019surfcon,
   title={SurfCon: Synonym Discovery on Privacy-Aware Clinical Data},
-  author={Wang, Zhen and Yue, Xiang and Moosavinasab, Soheil and Huang, Yungui and Lin, Simon and Sun, Huan}
-  author={Ma, Fenglong and Gao, Jing and Suo, Qiuling and You, Quanzeng and Zhou, Jing and Zhang, Aidong},
+  author={Wang, Zhen and Yue, Xiang and Moosavinasab, Soheil and Huang, Yungui and Lin, Simon and Sun, Huan},
   booktitle={Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery \& Data Mining},
   year={2019},
   organization={ACM}
