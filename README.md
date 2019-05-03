@@ -19,15 +19,15 @@ Our model and problem setting can be extended to any other text corpus with the 
 
 Testing:
 
-./test.sh
+> ./test.sh
 
 Training the inductive context prediction model:
 
-./train_ctx_pred.sh
+> ./train_ctx_pred.sh
 
 Training the final ranking model:
 
-./train_rank.sh
+> ./train_rank.sh
 
 ## 4. Citation
 ```
