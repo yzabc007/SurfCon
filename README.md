@@ -4,7 +4,9 @@ Implementation of SurfCon model for Paper "[SurfCon: Synonym Discovery on Privac
 ## 1. Introduction
 This repository is the implementation for the SurfCon model which utilizes the surface form and global context information to mine synonyms for medical terms extracted from Electronic Medical Records (EMRs).
 
-SurfCon model consists of two components.
+The surface form information provides connection between medical terms in the surface form level. Not surprisingly, surface form information is very important in medical domain. For example, term **hypocupremia** is the synonym of **copper deficiency** in which _hypo_ means _deficiency_, _cupre_ means _copper_ and also _mia_ is connected with _blood_. Thus, we design a bi-level surface form encoder to capture the information in both character and word levels of the medical terms.
+
+The global context information provides the semantic information between medical terms. 
 
 ## 2. Dataset
 The dataset used in current experiments contains medical term-term co-occurrence graphs extracted from EMRs. The dataset can be downloaded from the original paper, [Building the graph of medicine from millions of clinical narratives](https://datadryad.org/resource/doi:10.5061/dryad.jp917)
@@ -15,11 +17,17 @@ Our model and problem setting can be extended to any other text corpus with the 
 
 ## 3. Run
 
-Testing
+Testing:
 
-Training the final ranking model
+./test.sh
 
-Training the inductive context prediction model
+Training the inductive context prediction model:
+
+./train_ctx_pred.sh
+
+Training the final ranking model:
+
+./train_rank.sh
 
 ## 4. Citation
 ```
