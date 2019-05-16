@@ -13,11 +13,11 @@ The dataset used in current experiments contains medical term-term co-occurrence
 
 There are some inputs that need to be prepared before running. 
 
-Our model and problem setting can be extended to any other text corpus with the privacy concerns as long as a co-occurrence graph is provided.
+More importantly, you can apply our model to your own data. Our model and problem setting can be extended to any other text corpus with the privacy concerns as long as a co-occurrence graph is provided.
 
 ## 3. Run
 
-Testing:
+Testing our pretrained SurfCon model to discover synonyms:
 
 > ./test.sh
 
