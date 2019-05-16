@@ -1,100 +1,16 @@
 import os
-import sys
 import re
+import sys
 import pickle
-import numpy as np
-import networkx as nx
 import distance
 import jellyfish
-import re
+import numpy as np
+import networkx as nx
 from collections import Counter
-from torchnlp.word_to_vector import CharNGram
 
 import torch
 
 import utils
-
-
-def loading_unified_data(per, days, test_neg_num, num_oov,
-                         re_sample_test,
-                         term_strings, term_concept_dict, all_iv_terms,
-                         random_sample=True,
-                         use_train_single=False):
-
-    train_graph = nx.read_gpickle('../data/train_graph_nx_per' + per + '_' + days + '.gpickle')
-    test_graph = nx.read_gpickle('../data/test_graph_nx_per' + per + '_' + days + '.gpickle')
-
-    train_multi = [(x, list(train_graph.adj[x])) for x in train_graph.nodes]
-    test_multi = [(x, list(test_graph.adj[x])) for x in test_graph.nodes]
-    train_single = list(train_graph.edges())
-    test_single = list(test_graph.edges())
-
-    np.random.shuffle(train_multi)
-    np.random.shuffle(test_multi)
-
-    if use_train_single:
-        train_pos = train_single
-    else:
-        train_pos = train_multi
-
-    dev_pos = test_multi[: int(len(test_multi) / 2)]
-    iv_test_pos = test_multi[int(len(test_multi) / 2)::]
-    dis_iv_pos = utils.filter_sim_terms(iv_test_pos, term_strings)
-    print('Data: # train: {0}, # val: {1}, # iv test: {2}, # dis iv test {3}'.format(len(train_pos),
-                                                                                     len(dev_pos),
-                                                                                     len(iv_test_pos),
-                                                                                     len(dis_iv_pos)))
-    print('Sum # pos: train: {0}, val: {1}, iv test: {2}, '
-          'dis iv test {3}'.format(np.sum([len(x[1]) for x in train_pos]),
-                                      np.sum([len(x[1]) for x in dev_pos]),
-                                      np.sum([len(x[1]) for x in iv_test_pos]),
-                                      np.sum([len(x[1]) for x in dis_iv_pos])))
-
-    print('Average # pos: train: {0:.3}, val: {1:.3}, iv test: {2:.3}, '
-          'dis iv test {3:.3}'.format(np.mean([len(x[1]) for x in train_pos]),
-                                      np.mean([len(x[1]) for x in dev_pos]),
-                                      np.mean([len(x[1]) for x in iv_test_pos]),
-                                      np.mean([len(x[1]) for x in dis_iv_pos])))
-
-    all_oov_test = pickle.load(open('../data/oov_test_dict_per' + per + '_' + days + '.pkl', 'rb'))
-    all_oov_test = list(all_oov_test.items())
-    np.random.shuffle(all_oov_test)
-    oov_test_pos = all_oov_test[:num_oov]
-    dis_oov_pos = utils.filter_sim_terms(oov_test_pos, term_strings)
-    print('# oov test: {0}, average # pos: {1:3}, sum # pos: {2}'.format(
-        len(oov_test_pos), np.mean([len(x[1]) for x in oov_test_pos]), np.sum([len(x[1]) for x in oov_test_pos])))
-
-    print('# dis oov test: {0}, average # pos: {1:.3}, sum # pos: {2}'.format(
-        len(dis_oov_pos), np.mean([len(x[1]) for x in dis_oov_pos]), np.sum([len(x[1]) for x in dis_oov_pos])))
-
-    # pickle.dump([dev_pos, iv_test_pos, dis_iv_pos, oov_test_pos, dis_oov_pos], open('../data/dev_test_pos.pkl', 'wb'),
-    #             protocol=-1)
-
-    if random_sample:
-        if re_sample_test:
-            print('Re-sample negative samples for testing!')
-            dev = utils.random_neg_sampling(dev_pos, all_iv_terms, term_concept_dict, test_neg_num)
-
-            iv_test = utils.random_neg_sampling(iv_test_pos, all_iv_terms, term_concept_dict, test_neg_num)
-            dis_iv_test = utils.random_neg_sampling(dis_iv_pos, all_iv_terms, term_concept_dict, test_neg_num)
-
-            oov_test = utils.random_neg_sampling(oov_test_pos, all_iv_terms, term_concept_dict, test_neg_num)
-            dis_oov_test = utils.random_neg_sampling(dis_oov_pos, all_iv_terms, term_concept_dict, test_neg_num)
-
-            pickle.dump([dev, iv_test, dis_iv_test, oov_test, dis_oov_test],
-                        open('../data/dev_test_data_per{0}_{1}_{2}_{3}.pkl'.
-                             format(per, days, num_oov, len(dis_oov_pos)), 'wb'), protocol=-1)
-        else:
-            dev, iv_test, dis_iv_test, oov_test, dis_oov_test = pickle.load(
-                open('../data/dev_test_data_per{0}_{1}_{2}_{3}.pkl'.
-                     format(per, days, num_oov, len(dis_oov_pos)), 'rb'))
-    else:
-        dev, iv_test, dis_iv_test, oov_test, dis_oov_test = pickle.load(
-            open('../data/new_dev_test_data_per{0}_{1}_{2}.pkl'.
-                 format(per, days, num_oov), 'rb'))
-
-    print('Data loaded!')
-    return train_pos, dev, iv_test, dis_iv_test, oov_test, dis_oov_test
 
 
 def load_pretrain_vec(embed_filename, dim=None):

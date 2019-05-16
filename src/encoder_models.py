@@ -12,7 +12,7 @@ import torch.nn.functional as F
 
 
 class ContextPredictionWordNGram(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args, weights=None):
         super(ContextPredictionWordNGram, self).__init__()
         self.args = args
         # self.dropout = args.dropout
@@ -24,15 +24,24 @@ class ContextPredictionWordNGram(nn.Module):
         self.char_output_dim = args.node_embed_dim
 
         # embeddings
-        self.ngrams_embeddings = nn.Embedding.from_pretrained(torch.FloatTensor(args.pre_train_ngram),
-                                                              freeze=False)
-        self.w2v_embeddings = nn.Embedding.from_pretrained(torch.FloatTensor(args.pre_train_words),
-                                                           freeze=False)
+        self.ngrams_embeddings = nn.Embedding.from_pretrained(torch.FloatTensor(args.pre_train_ngram), freeze=False)
+        self.w2v_embeddings = nn.Embedding.from_pretrained(torch.FloatTensor(args.pre_train_words), freeze=False)
+
         # nets
         self.fc_out = nn.Linear(self.ngram_D + self.word_D, self.char_output_dim)
-        self.context_pred = nn.Linear(self.char_output_dim, self.output_V)
-
+        self.context_out = nn.Linear(self.char_output_dim, self.output_V, bias=False)
         self.out = nn.LogSoftmax(dim=1)
+
+        # negative sampling
+        if args.neg_sampling:
+            self.context_embeddings = nn.Embedding.from_pretrained(self.context_out.weight, freeze=False)
+            self.num_negs = args.num_negs
+            if weights is not None:
+                wf = np.power(weights, 0.75)
+                wf = wf / wf.sum()
+                self.weights = torch.FloatTensor(wf)
+            else:
+                self.weights = None
 
     def line2_ce_loss(self, logits, labels):
         '''
@@ -57,10 +66,63 @@ class ContextPredictionWordNGram(nn.Module):
         x_out = self.fc_out(torch.tanh(x))
         return x_out
 
+    def forward_ns_loss(self, x_list):
+        contexts = x_list[-1]
+        inputs_embed = self.get_sub_embed_cell(x_list)  # [B, D]
+        outputs_embed = self.context_embeddings(contexts)  # [B, D]
+
+        batch_size = contexts.shape[0]
+        if self.weights is not None:
+            neg_terms = torch.multinomial(self.weights, batch_size * self.num_negs, replacement=True).view(batch_size, -1)
+        else:
+            neg_terms = torch.FloatTensor(batch_size, self.num_negs).uniform_(0, self.output_V - 1).long()
+
+        if self.args.cuda:
+            neg_terms = neg_terms.cuda()
+
+        neg_embed = self.context_embeddings(neg_terms).neg()  # [B, S, D]
+        inputs_embed = inputs_embed.unsqueeze(2)  # [B, D]
+        outputs_embed = outputs_embed.unsqueeze(1)  # [B, D]
+        pos_loss = torch.bmm(outputs_embed, inputs_embed).squeeze().sigmoid().log().mean(0)
+        neg_loss = torch.bmm(neg_embed, inputs_embed).squeeze().sigmoid().log().sum(1).mean(0)
+
+        return -(pos_loss + neg_loss).mean()
+
     def forward(self, x_list):
-        x = self.get_sub_embed_cell(x_list)
-        y = self.context_pred(x)
+        x = self.get_sub_embed_cell(x_list)  # [B, D]
+
+        if self.args.neg_sampling:
+            weight_mat = self.context_embeddings.weight  # [V, D]
+            y = torch.mm(x, weight_mat.t())  # [B, V]
+        else:
+            y = self.context_out(x)
         return y
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

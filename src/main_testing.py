@@ -33,7 +33,7 @@ parser.add_argument('--num_oov', type=int, default=2000)
 parser.add_argument('--re_sample_test', type='bool', default=False)
 parser.add_argument('--train_neg_num', type=int, default=50)
 parser.add_argument('--test_neg_num', type=int, default=100)
-parser.add_argument("--num_contexts", type=int, default=200, help="# contexts for interaction")
+parser.add_argument("--num_contexts", type=int, default=100, help="# contexts for interaction")
 parser.add_argument('--max_contexts', type=int, default=1000, help='max contexts to look at')
 parser.add_argument('--context_gamma', type=float, default=0.3)
 # model parameters
@@ -75,6 +75,8 @@ parser.add_argument('--random_test', type='bool', default=True)
 parser.add_argument('--neg_sampling', type='bool', default=False)
 parser.add_argument('--num_negs', type=int, default=5)
 
+parser.add_argument('--rank_model_path', type=str, required=True, default='')
+
 args = parser.parse_args()
 print('args: ', args)
 
@@ -93,9 +95,6 @@ np.random.seed(args.random_seed)
 torch.manual_seed(args.random_seed)
 
 args.restore_para_file = './saved_models/{0}_{1}_pretrain_model_dict.pkl'.format(args.per, args.days)
-# path to store
-args.save_dir = './saved_models/rank_model_per{0}_{1}'.format(args.per, args.days)
-# print(args.save_dir)
 
 # global parameters
 args.term_strings = pickle.load(open('../data/mappings/term_string_mapping.pkl', 'rb'))
@@ -167,11 +166,6 @@ else:
 
 print('Data loaded!')
 
-# testing
-# train_pos = train_pos[:100]
-# dev = dev[:10]
-# iv_test = iv_test[:10]
-# oov_test = oov_test[:10]
 
 # data pre-processing
 restore_para_file = './saved_models/{0}_{1}_pretrain_model_dict.pkl'.format(args.per, args.days)
@@ -203,108 +197,44 @@ else:
     raise ValueError('Need Pre-stored Parameters!')
 
 print('Begin digitalizing ...')
-# prepare digital samples
-dev_idx = utils.make_idx_data(dev, args)
-iv_test_idx = utils.make_idx_data(iv_test, args)
-dis_iv_test_idx = utils.make_idx_data(dis_iv_test, args)
-oov_test_idx = utils.make_idx_data(oov_test, args)
-dis_oov_test_idx = utils.make_idx_data(dis_oov_test, args)
-
-print(len(dev_idx), len(iv_test_idx), len(dis_iv_test), len(oov_test_idx), len(dis_oov_test_idx))
 
 model = Ranker.DeepTermRankingListNet(args)
 if args.cuda:
     model = model.cuda()
 print(model)
-print([name for name, p in model.named_parameters()])
+# print([name for name, p in model.named_parameters()])
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, betas=(0.9, 0.999))
+# args.rank_model_path = './saved_models/rank_model_perBin_1/best_epoch_18.pt'
+# rank_model_path = './saved_models/rank_model_wordngram_perBin_1_ctx_pred/best_epoch_17.pt'
+model.load_state_dict(torch.load(args.rank_model_path), strict=True)
+model.eval()
 
-# training
-last_epoch = 0
-best_on_dev = 0.0
-train_loss = 0
-train_logits = []
-train_labels = []
-print('Begin trainning...')
-for epoch in range(args.num_epochs):
-    model.train()
-    steps = 0
-    np.random.shuffle(train_pos)
-    for cur_sample in train_pos:
-        # the batch size is the number of documents
-        cur_raw_data = utils.random_neg_sampling([cur_sample], args.all_iv_terms, args.term_concept_dict, args.train_neg_num)
-        cur_idx_data = utils.make_idx_data(cur_raw_data, args)
-        t1_list, t2_list, onehot_labels = utils.preprocess(cur_idx_data[0], args)
-        # print([x.shape for x in t2_list])
-        onehot_labels = torch.FloatTensor(onehot_labels).reshape(1, -1)
+sample = oov_test_pos[0]
+# query = sample[0]
+query = 'paragangliomas 1'
+if type(query) is str:
+    print('Query: ', query)
+else:
+    print('Query: ', args.term_strings[query])
+print('Golds: ', [args.term_strings[x] for x in sample[1]])
+scores = utils.get_ranking_score(model, query, args.all_iv_terms, args)
+print(len(scores))
 
-        t1_list = [torch.tensor(x) for x in t1_list[:-1]] + [t1_list[-1]]
-        t2_list = [torch.tensor(x) for x in t2_list[:-1]] + [t2_list[-1]]
-        if args.cuda:
-            onehot_labels = onehot_labels.cuda()
-            t1_list = [x.cuda() for x in t1_list[:-1]] + [t1_list[-1]]
-            t2_list = [x.cuda() for x in t2_list[:-1]] + [t2_list[-1]]
 
-        optimizer.zero_grad()
-        logits = model(t1_list, t2_list)
-        rank_loss = model.listwise_cost(logits, onehot_labels)
-        # rank_loss = criterion(logits, ce_labels)
-        loss = rank_loss
 
-        train_loss += loss
-        if args.cuda:
-            train_logits.append(logits.cpu().detach().numpy()[0])
-            train_labels.append(onehot_labels.cpu().numpy()[0])
-        else:
-            train_logits.append(logits.detach().numpy()[0])
-            train_labels.append(onehot_labels.numpy()[0])
 
-        # bp
-        loss.backward()
-        nn.utils.clip_grad_norm_(model.parameters(), args.clip_grad)
-        optimizer.step()
 
-        steps += 1
-        if steps % args.log_interval == 0:
-            print("Epoch-{0}, steps-{1}: Train {2} - {3:.5}, Train Loss - {4:.5}".
-                  format(epoch, steps, args.metric.upper(), utils.eval_metric(train_logits, train_labels, args.metric),
-                         train_loss / len(train_labels)))
-            train_loss = 0
-            train_logits = []
-            train_labels = []
 
-    utils.adjust_learning_rate(optimizer, args.learning_rate / (1 + (epoch + 1) * args.lr_decay))
 
-    if epoch % args.test_interval == 0:
-        all_dev = train_utils.evaluation(dev_idx, model, criterion, args)
-        print("Epoch-{0}: All Dev {1}: {2:.5}".format(epoch, args.metric.upper(), all_dev))
 
-        if all_dev > best_on_dev:
-            print(datetime.now().strftime("%m/%d/%Y %X"))
-            best_on_dev = all_dev
-            last_epoch = epoch
 
-            all_iv = train_utils.evaluation(iv_test_idx, model, criterion, args)
-            print("--- Testing: All IV Test {0}: {1:.5}".format(args.metric.upper(), all_iv))
 
-            all_iv = train_utils.evaluation(dis_iv_test_idx, model, criterion, args)
-            print("--- Testing: All Dis IV Test {0}: {1:.5}".format(args.metric.upper(), all_iv))
 
-            all_oov = train_utils.evaluation(oov_test_idx, model, criterion, args)
-            print("--- Testing: All OOV Test {0}: {1:.5}".format(args.metric.upper(), all_oov))
 
-            all_oov = train_utils.evaluation(dis_oov_test_idx, model, criterion, args)
-            print("--- Testing: All Dis OOV Test {0}: {1:.5}".format(args.metric.upper(), all_oov))
 
-            if args.save_best:
-                utils.save(model, args.save_dir, 'best', epoch)
 
-        else:
-            if epoch - last_epoch > args.early_stop_epochs and epoch > args.min_epochs:
-                print('Early stop at {0} epoch.'.format(epoch))
-                break
 
-    elif epoch % args.save_interval == 0:
-        utils.save(model, args.save_dir, 'snapshot', epoch)
+
+
+
+

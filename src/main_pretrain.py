@@ -46,9 +46,37 @@ def make_idx_data_term(dataset, args):
         for y in cur_sample[1]:
             if y[0] in args.node_to_id:
                 label_vec[args.node_to_id[y[0]]] = y[1]
+                # label_vec[args.node_to_id[y[0]]] = 1
         cur_dict['y'] = label_vec / np.sum(label_vec)
 
         data.append(cur_dict)
+    return data
+
+
+def make_idx_term_ns(dataset, args):
+    data = []  # [(node_id, [(node_id1, ppmi?count?), (node_id2, ppmi?count?), ...]), (), ...]
+    for cur_sample in dataset:
+        cur_dict = {}
+        cur_dict['id'] = cur_sample[0]
+        cur_dict['str'] = args.term_strings[cur_sample[0]]
+
+        ngram_ids = []
+        for g in utils.get_single_ngrams(args.term_strings[cur_sample[0]], args.n_grams):
+            if g in args.ngram_to_id:
+                ngram_ids.append(args.ngram_to_id[g])
+        if ngram_ids is []:
+            ngram_ids.append(args.ngram_to_id['<UNK>'])
+        cur_dict['ngram_ids'] = ngram_ids
+
+        word_list = args.term_strings[cur_sample[0]].split()
+        cur_dict['word_ids'] = [args.word_to_id[w if w in args.word_to_id else '<UNK>'] for w in word_list]
+        cur_dict['word_len'] = len(word_list)
+
+        # context terms
+        for context in cur_sample[1]:
+            cur_dict['context'] = args.node_to_id[context[0]]
+            data.append(cur_dict)
+
     return data
 
 
@@ -75,7 +103,31 @@ def batch_process_term(batch_data, args):
     return [word_ids, word_lengths, ngram_ids, ngram_length], y
 
 
+def batch_process_ns(batch_data, args):
+    word_ids = []
+    word_len = []
+    ngram_ids = []
+    ngram_length = []
+    contexts = []
+
+    for sample in batch_data:
+        word_ids.append(sample['word_ids'])
+        word_len.append(sample['word_len'])
+        ngram_ids.append(sample['ngram_ids'])
+        ngram_length.append(len(sample['ngram_ids']))
+        contexts.append(sample['context'])
+
+    word_ids = utils.pad_sequence(word_ids).astype(int)
+    word_lengths = np.array(word_len).astype(np.float32)
+    ngram_ids = utils.pad_sequence(ngram_ids).astype(int)
+    ngram_length = np.array(ngram_length).astype(np.float32)
+    contexts = np.array(contexts)
+
+    return [word_ids, word_lengths, ngram_ids, ngram_length, contexts]
+
+
 def main():
+
     def str2bool(string):
         return string.lower() in ['yes', 'true', 't', 1]
 
@@ -105,7 +157,10 @@ def main():
 
     parser.add_argument("--save_best", type='bool', default=True, help='save model in the best epoch or not')
     parser.add_argument("--save_dir", type=str, default='./saved_models/saved_pretrained')
-    parser.add_argument("--save_interval", type=int, default=50, help='intervals for saving models')
+    parser.add_argument("--save_interval", type=int, default=1, help='intervals for saving models')
+
+    parser.add_argument('--neg_sampling', type='bool', default=False)
+    parser.add_argument('--num_negs', type=int, default=5)
 
     args = parser.parse_args()
     print('args: ', args)
@@ -118,11 +173,6 @@ def main():
 
     args.term_strings = pickle.load(open('../data/mappings/term_string_mapping.pkl', 'rb'))
     dataset = pickle.load(open('../data/sym_data/sub_neighbors_dict_ppmi_per' + args.per + '_' + args.days + '.pkl', 'rb'))
-
-    # dataset splitting
-    train = [(x, dataset[x]) for x in dataset.keys()]
-    np.random.shuffle(train)
-    print('Training terms: {0}'.format(len(train)))
 
     # prepare context labels
     context_terms = list(dataset.keys())
@@ -189,10 +239,8 @@ def main():
         pickle.dump(model_dict, open(reuse_stored_path, 'wb'), protocol=-1)
         print('Model Parameters Stored!')
 
-    # digitalization
-    train_idx = make_idx_data_term(train, args)
-
     # optimizer and loss function
+    '''
     model = encoder_models.ContextPredictionWordNGram(args)
     if args.cuda:
         model = model.cuda()
@@ -205,46 +253,125 @@ def main():
                                if p.requires_grad and name.count('embeddings') == 0)
     print('Total # parameter: {0} w/o embeddings'.format(pytorch_total_params))
 
-    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)    
+    '''
+    if args.neg_sampling:
+        degree_list = pickle.load(open('../data/sym_data/degree_list_perBin_1.pkl', 'rb'))
+        weights = np.zeros(args.node_vocab_size)
+        for y in degree_list:
+            if y[0] in args.node_to_id:
+                weights[args.node_to_id[y[0]]] = y[1]
 
-    # training
-    last_epoch = 0
-    best_loss = np.inf
-    num_batches = len(train) // args.batch_size
-    print('Begin trainning...')
-    model.train()
-    for epoch in range(args.num_epochs):
-        steps = 0
-        train_loss = 0.0
-        np.random.shuffle(train_idx)
-        for i in range(num_batches):
-            train_batch = train_idx[i * args.batch_size: (i + 1) * args.batch_size]
-            if i == num_batches - 1:
-                train_batch = train_idx[i * args.batch_size::]
+        model = encoder_models.ContextPredictionWordNGram(args, weights)
+        if args.cuda:
+            model = model.cuda()
+        print(model)
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
 
-            local_xs, local_y = batch_process_term(train_batch, args)
+        train = [(x, dataset[x]) for x in dataset.keys()]
+        np.random.shuffle(train)
+        print('Training terms: {0}'.format(len(train)))
+        # digitalization
+        train_idx = make_idx_term_ns(train, args)
+        print('Total number of pairs:', len(train_idx))
 
-            local_y = torch.FloatTensor(local_y)
-            local_xs = [torch.tensor(x) for x in local_xs]
-            if args.cuda:
-                local_y = local_y.cuda()                               
-                local_xs = [x.cuda() for x in local_xs]
+        args.log_interval = len(train_idx) // 10
+        # training
+        last_epoch = 0
+        best_loss = np.inf
+        num_batches = len(train_idx) // args.batch_size
+        print('Begin trainning...')
+        model.train()
+        for epoch in range(args.num_epochs):
+            steps = 0
+            train_loss = []
+            np.random.shuffle(train_idx)
+            for i in range(num_batches):
+                train_batch = train_idx[i * args.batch_size: (i + 1) * args.batch_size]
+                if i == num_batches - 1:
+                    train_batch = train_idx[i * args.batch_size::]
 
-            optimizer.zero_grad()
-            logits = model(local_xs)  # (64, 1)
-            loss = model.line2_ce_loss(logits, local_y)
-            train_loss += loss.item()
-            # bp
-            loss.backward()
-            optimizer.step()
+                local_xs = batch_process_ns(train_batch, args)
+                local_xs = [torch.tensor(x) for x in local_xs]
+                if args.cuda:
+                    local_xs = [x.cuda() for x in local_xs]
 
-            steps += 1
+                optimizer.zero_grad()
+                loss = model.forward_ns_loss(local_xs)  # (64, 1)
+                train_loss.append(loss.item())
 
-        print('Epoch {0} - Train loss\u2193:{1:.10}'.format(epoch, train_loss / len(train)))
+                # bp
+                loss.backward()
+                optimizer.step()
 
-        if epoch % args.save_interval == 0:
-            print(datetime.now().strftime("%m/%d/%Y %X"))
-            utils.save(model, args.save_dir, 'snapshot', epoch)
+                steps += 1
+
+                if steps % args.log_interval == 0:
+                    print('Epoch {0} step {1} - Train loss\u2193:{2:.10}'.format(epoch, steps, np.mean(train_loss)))
+
+            print('Epoch {0} - Train loss\u2193:{1:.10}'.format(epoch, np.mean(train_loss)))
+
+            # if epoch % args.save_interval == 0:
+            # if steps % 10000 == 0:
+            #     print(datetime.now().strftime("%m/%d/%Y %X"))
+            #     utils.save(model, args.save_dir, 'ns_snapshot_' + str(steps), epoch)
+
+            if epoch % args.save_interval == 0:
+                print(datetime.now().strftime("%m/%d/%Y %X"))
+                utils.save(model, args.save_dir, 'ns_snapshot', epoch)
+
+    else:
+        model = encoder_models.ContextPredictionWordNGram(args)
+        if args.cuda:
+            model = model.cuda()
+        print(model)
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+
+        # dataset splitting
+        train = [(x, dataset[x]) for x in dataset.keys()]
+        np.random.shuffle(train)
+        print('Training terms: {0}'.format(len(train)))
+        # digitalization
+        train_idx = make_idx_data_term(train, args)
+
+        # training
+        last_epoch = 0
+        best_loss = np.inf
+        num_batches = len(train) // args.batch_size
+        print('Begin trainning...')
+        model.train()
+        for epoch in range(args.num_epochs):
+            steps = 0
+            train_loss = 0.0
+            np.random.shuffle(train_idx)
+            for i in range(num_batches):
+                train_batch = train_idx[i * args.batch_size: (i + 1) * args.batch_size]
+                if i == num_batches - 1:
+                    train_batch = train_idx[i * args.batch_size::]
+
+                local_xs, local_y = batch_process_term(train_batch, args)
+
+                local_y = torch.FloatTensor(local_y)
+                local_xs = [torch.tensor(x) for x in local_xs]
+                if args.cuda:
+                    local_y = local_y.cuda()
+                    local_xs = [x.cuda() for x in local_xs]
+
+                optimizer.zero_grad()
+                logits = model(local_xs)  # (64, 1)
+                loss = model.line2_ce_loss(logits, local_y)
+                train_loss += loss.item()
+                # bp
+                loss.backward()
+                optimizer.step()
+
+                steps += 1
+
+            print('Epoch {0} - Train loss\u2193:{1:.10}'.format(epoch, train_loss / len(train)))
+
+            if epoch % args.save_interval == 0:
+                print(datetime.now().strftime("%m/%d/%Y %X"))
+                utils.save(model, args.save_dir, 'snapshot', epoch)
 
     return
 

@@ -16,6 +16,38 @@ import torch
 import loader
 
 
+def get_ranking_score(model, query, candidates, args):
+    all_logits = []
+    batch_size = 10000
+    num_batches = len(candidates) // batch_size
+
+    for i in range(num_batches):
+        cur_batch = candidates[i * batch_size: (i + 1) * batch_size]
+        if i == num_batches - 1:
+            cur_batch = candidates[i * batch_size::]
+
+        samples = [query, [(x, 0) for x in cur_batch]]
+        cur_idx_data = make_idx_data([samples], args)
+        t1_list, t2_list, onehot_labels = preprocess(cur_idx_data[0], args)
+
+        t1_list = [torch.tensor(x) for x in t1_list[:-1]] + [t1_list[-1]]
+        t2_list = [torch.tensor(x) for x in t2_list[:-1]] + [t2_list[-1]]
+        if args.cuda:
+            t1_list = [x.cuda() for x in t1_list[:-1]] + [t1_list[-1]]
+            t2_list = [x.cuda() for x in t2_list[:-1]] + [t2_list[-1]]
+
+        logits = model(t1_list, t2_list)
+
+        if args.cuda:
+            logits = logits.cpu().detach().numpy()
+        else:
+            logits = logits.detach().numpy()
+
+        all_logits += list(logits.reshape(-1))
+
+    return all_logits
+
+
 def unsupervised_pair_ranking(idx_data, score_func, metric):
     all_logits = []
     all_labels = []
@@ -116,54 +148,66 @@ def make_idx_one_term(dataset, args):
     # dataset: a list of term ids
     data_dict_list = []
     for cur_term in dataset:
-        cur_dict = {}
-        cur_dict['id'] = cur_term
-        cur_dict['str'] = args.term_strings[cur_term]
+        if type(cur_term ) is not str:
+            cur_dict = {}
+            cur_dict['id'] = cur_term
+            cur_dict['str'] = args.term_strings[cur_term]
+            # default values - reduce the memory load
+            cur_dict['ngram_ids'] = [0]
+            cur_dict['char_list_ids'] = [[0]]
+            cur_dict['char_list_len'] = [0]
+            cur_dict['ngram_list_ids'] = [[0]]
+            cur_dict['ngram_list_len'] = [0]
+            cur_dict['word_ids'] = [0]
+            cur_dict['word_len'] = len(args.term_strings[cur_term].split())
+            cur_dict['gold_ctx'] = [0]
 
-        # default values - reduce the memory load
-        cur_dict['ngram_ids'] = [0]
-        cur_dict['char_list_ids'] = [[0]]
-        cur_dict['char_list_len'] = [0]
-        cur_dict['ngram_list_ids'] = [[0]]
-        cur_dict['ngram_list_len'] = [0]
-        cur_dict['word_ids'] = [0]
-        cur_dict['word_len'] = len(args.term_strings[cur_term].split())
-        cur_dict['gold_ctx'] = [0]
+            '''keep the following few lines to be the same as those in main_pretrain'''
+            ngram_ids = []
+            for g in get_single_ngrams(args.term_strings[cur_term], args.n_grams):
+                if g in args.ngram_to_id:
+                    ngram_ids.append(args.ngram_to_id[g])
+            if ngram_ids is []:
+                ngram_ids.append(args.ngram_to_id['<UNK>'])
+            cur_dict['ngram_ids'] = ngram_ids
 
-        ngram_ids = []
-        for g in get_single_ngrams(args.term_strings[cur_term], args.n_grams):
-            if g in args.ngram_to_id:
-                ngram_ids.append(args.ngram_to_id[g])
-        if ngram_ids is []:
-            ngram_ids.append(args.ngram_to_id['<UNK>'])
-        cur_dict['ngram_ids'] = ngram_ids
+            word_list = args.term_strings[cur_term].split()
+            cur_dict['word_ids'] = [args.word_to_id[w if w in args.word_to_id else '<UNK>'] for w in word_list]
+            cur_dict['word_len'] = len(word_list)
 
-        word_list = args.term_strings[cur_term].split()
-        cur_dict['word_ids'] = [args.word_to_id[w if w in args.word_to_id else '<UNK>'] for w in word_list]
-        cur_dict['word_len'] = len(word_list)
+            # collect golden contexts
+            if args.use_context:
+                # cur_dict['gold_ctx'] = [args.node_to_id[cur_term]]
+                if cur_term in args.node_to_id:
+                    cur_dict['gold_ctx'] = [args.node_to_id[cur_term]]
+                else:
+                    cur_dict['gold_ctx'] = [0]
+        else:
+            cur_dict = {}
+            cur_dict['str'] = cur_term
+            # default values - reduce the memory load
+            cur_dict['ngram_ids'] = [0]
+            cur_dict['char_list_ids'] = [[0]]
+            cur_dict['char_list_len'] = [0]
+            cur_dict['ngram_list_ids'] = [[0]]
+            cur_dict['ngram_list_len'] = [0]
+            cur_dict['word_ids'] = [0]
+            cur_dict['word_len'] = len(cur_term.split())
+            cur_dict['gold_ctx'] = [0]
 
-        # collect golden contexts
-        if args.use_context:
-            # cur_dict['gold_ctx'] = [args.node_to_id[cur_term]]
-            if cur_term in args.node_to_id:
-                cur_dict['gold_ctx'] = [args.node_to_id[cur_term]]
-            else:
-                cur_dict['gold_ctx'] = [0]
+            '''keep the following few lines to be the same as those in main_pretrain'''
+            ngram_ids = []
+            for g in get_single_ngrams(cur_term, args.n_grams):
+                if g in args.ngram_to_id:
+                    ngram_ids.append(args.ngram_to_id[g])
+            if ngram_ids is []:
+                ngram_ids.append(args.ngram_to_id['<UNK>'])
+            cur_dict['ngram_ids'] = ngram_ids
 
-            # if cur_term in args.neighbors:
-            #     cur_dict['gold_ctx'] = [0]
-            #     f1_context = args.neighbors[cur_term]
-            #     f1_neighbors = [x[0] for x in f1_context][:args.max_contexts]
-            #
-            #     t1_contexts = []
-            #     for x in f1_neighbors:
-            #         if x in args.node_to_id:
-            #             t1_contexts.append(args.node_to_id[x])
-            #     if not t1_contexts:
-            #         t1_contexts.append(0)
-            #     cur_dict['gold_ctx'] = t1_contexts
-            # else:
-            #     cur_dict['gold_ctx'] = [0]
+            word_list = cur_term.split()
+            cur_dict['word_ids'] = [args.word_to_id[w if w in args.word_to_id else '<UNK>'] for w in word_list]
+            cur_dict['word_len'] = len(word_list)
+
         data_dict_list.append(cur_dict)
     return data_dict_list
 

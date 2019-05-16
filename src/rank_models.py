@@ -21,6 +21,12 @@ class DeepTermRankingListNet(nn.Module):
 
         self.TermEncoder = Encoder.ContextPredictionWordNGram(args)
 
+        if args.use_context:
+            assert(args.restore_model_path != '')
+            print('-- Word-Ngram Pretrained loaded! --')
+            self.ContextPredictor = Encoder.ContextPredictionWordNGram(args)  # init()
+            self.ContextPredictor.load_state_dict(torch.load(args.restore_model_path), strict=False)
+
         self.str_dim = self.TermEncoder.char_output_dim
         self.con_dim = self.context_dim
 
