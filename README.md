@@ -6,7 +6,7 @@ This repository is the implementation for the SurfCon model which utilizes the s
 
 The surface form information provides connection between medical terms in the surface form level. Not surprisingly, surface form information is very important in medical domain. For example, term **hypocupremia** is the synonym of **copper deficiency** in which _hypo_ means _deficiency_, _cupre_ means _copper_ and also _mia_ is connected with _blood_. Thus, we design a bi-level surface form encoder to capture the information in both character and word levels of the medical terms.
 
-The global context information provides the semantic information between medical terms. 
+The global context information provides the semantic information between medical terms. To deal with OOV problem (e.g., query terms may not show up in existing data), we leverage an inductive context prediction module to predict close neighbors for terms and aggregate the predicted neighbors to calculate the context score. 
 
 ## 2. Dataset
 The dataset used in current experiments contains medical term-term co-occurrence graphs extracted from EMRs. The dataset can be downloaded from the original paper, [Building the graph of medicine from millions of clinical narratives](https://datadryad.org/resource/doi:10.5061/dryad.jp917)
