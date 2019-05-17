@@ -11,8 +11,6 @@ The global context information provides the semantic information between medical
 ## 2. Dataset
 The dataset used in current experiments contains medical term-term co-occurrence graphs extracted from EMRs. The dataset can be downloaded from the original paper, [Building the graph of medicine from millions of clinical narratives](https://datadryad.org/resource/doi:10.5061/dryad.jp917)
 
-There are some inputs that need to be prepared before running. 
-
 More importantly, you can apply our model to your own data. Our model and problem setting can be extended to any other text corpus with the privacy concerns as long as a co-occurrence graph is provided.
 
 ## 3. Run
