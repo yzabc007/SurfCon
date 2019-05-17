@@ -19,15 +19,16 @@ More importantly, you can apply our model to your own data. Our model and proble
 
 Testing our pretrained SurfCon model to discover synonyms:
 
-> ./test.sh
-
-Training the inductive context prediction model:
-
-> ./train_ctx_pred.sh
+> bash test_surfcon.sh
 
 Training the final ranking model:
 
-> ./train_rank.sh
+> bash train_surfcon.sh
+
+Training the inductive context prediction model:
+
+> bash train_ctx_pred.sh
+
 
 ## 4. Citation
 ```
