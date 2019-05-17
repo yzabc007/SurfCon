@@ -19,13 +19,17 @@ Testing our pretrained SurfCon model to discover synonyms:
 
 > bash test_surfcon.sh
 
-Training the final ranking model:
+Steps for trianing the model freom scratch:
 
-> bash train_surfcon.sh
+Step 1: Training the inductive context prediction model:
 
-Training the inductive context prediction model:
+        > bash train_ctx_pred.sh
+        
 
-> bash train_ctx_pred.sh
+Step 2: Training the final ranking model:
+
+        > bash train_surfcon.sh
+
 
 
 ## 4. Citation
