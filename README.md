@@ -19,7 +19,7 @@ Testing our pretrained SurfCon model to discover synonyms:
 
         > bash test_surfcon.sh
 
-Steps for trianing the model freom scratch:
+Steps for trianing the model from scratch:
 
 Step 1: Training the inductive context prediction model:
 
