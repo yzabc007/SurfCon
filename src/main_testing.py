@@ -7,7 +7,7 @@ import distance
 import numpy as np
 import networkx as nx
 from datetime import datetime
-from torchnlp.word_to_vector import CharNGram
+# from torchnlp.word_to_vector import CharNGram
 
 import torch
 import torch.nn as nn
