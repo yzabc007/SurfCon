@@ -78,6 +78,8 @@ parser.add_argument('--num_negs', type=int, default=5)
 parser.add_argument('--rank_model_path', type=str, required=True, default='')
 parser.add_argument('--num_results', type=int, default=10, help='number of results to show')
 
+parser.add_argument('--cand_terms_path', type=str, default='', help='your own candidate set')
+
 args = parser.parse_args()
 print('args: ', args)
 
@@ -133,11 +135,20 @@ model.load_state_dict(torch.load(args.rank_model_path), strict=True)
 model.eval()
 print('Pretrained model loaded!')
 
+
+if args.cand_terms_path:
+    print('Using your own candidate terms ...')
+    cand_terms = list(np.loadtxt(arg.cand_terms_path, 'str'))
+else:
+    print('Using default candidate terms ...')
+    cand_terms = args.all_iv_terms
+
+
 while True:
     query = str(input('Input your query (Press \'exit\' to exit): '))
     if query == 'exit':
         exit()
-    scores = utils.get_ranking_score(model, query, args.all_iv_terms, args)
+    scores = utils.get_ranking_score(model, query, cand_terms, args)
     sorted_rank_idx = np.argsort(scores)[::-1]
     sorted_ids = np.array(args.all_iv_terms)[sorted_rank_idx]
     print('Top ranking:')
