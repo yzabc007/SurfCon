@@ -13,7 +13,7 @@ The dataset used in current experiments contains medical term-term co-occurrence
 
 More importantly, you can apply our model to your own data. Our model and problem setting can be extended to any other text corpus with the privacy concerns as long as a co-occurrence graph is provided.
 
-For a 
+
 
 
 ## 3. Run
