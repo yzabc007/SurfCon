@@ -22,7 +22,7 @@ More importantly, you can apply our model to your own data. Our model and proble
 
 1. For testing our pretrained SurfCon model to discover synonyms, please download the [pretrained model and parameters](https://drive.google.com/file/d/1126dtSV4XI_FWP4l0hUogijjUimRYIEF/view?usp=sharing) and ensure the correct file paths.
 
-2. The pretrained embeddings can be downloaded here: [GloVe](https://nlp.stanford.edu/projects/glove/), [charNgram](https://www.logos.t.u-tokyo.ac.jp/~hassy/publications/arxiv2016jmt/'%20'jmt_pre-trained_embeddings.tar.gz), [node features](https://drive.google.com/file/d/1nKXDppoSsT6uHCl0yG_zlrC4QFyCyu41/view?usp=sharing).
+2. The pretrained embeddings can be downloaded here: [GloVe](http://nlp.stanford.edu/data/glove.6B.zip), [charNgram](https://www.logos.t.u-tokyo.ac.jp/~hassy/publications/arxiv2016jmt/'%20'jmt_pre-trained_embeddings.tar.gz), [node features](https://drive.google.com/file/d/1nKXDppoSsT6uHCl0yG_zlrC4QFyCyu41/view?usp=sharing).
 
 3. If you have your own terms, please reivse the argument `--cand_terms_path` in `test_surfcon.sh`.
 
