@@ -30,7 +30,7 @@ More importantly, you can apply our model to your own data. Our model and proble
 
         > bash test_surfcon.sh
 
-#### Training
+### Training
 
 Steps for trianing the model from scratch:
 
@@ -44,6 +44,7 @@ Step 2: Training the final ranking model:
         > bash train_surfcon.sh
 
 
+If you have any questions, please feel free to contact us!
 
 ## 4. Citation
 ```
