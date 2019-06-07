@@ -1,13 +1,12 @@
 import os
 import sys
+import time
 import pickle
 import argparse
-import time
 import distance
 import numpy as np
 import networkx as nx
 from datetime import datetime
-# from torchnlp.word_to_vector import CharNGram
 
 import torch
 import torch.nn as nn
@@ -87,10 +86,6 @@ np.random.seed(args.random_seed)
 torch.manual_seed(args.random_seed)
 
 # global parameters
-args.term_strings = pickle.load(open('../data/mappings/term_string_mapping.pkl', 'rb'))
-args.term_concept_dict = pickle.load(open('../data/mappings/term_concept_mapping.pkl', 'rb'))
-args.concept_term_dict = pickle.load(open('../data/mappings/concept_term_mapping.pkl', 'rb'))
-args.all_iv_terms = pickle.load(open('../data/sym_data/all_iv_terms_per{0}_{1}.pkl'.format(args.per, args.days), 'rb'))
 args.neighbors = []
 
 args.cuda = torch.cuda.is_available()
@@ -137,22 +132,38 @@ print('Pretrained model loaded!')
 
 
 if args.cand_terms_path:
-    print('Using your own candidate terms ...')
-    cand_terms = list(np.loadtxt(arg.cand_terms_path, 'str'))
+    print('--- Using your own candidate terms ...\n')
+    cand_terms = [x.strip() for x in open(args.cand_terms_path, 'r')]
+    # cand_terms = list(np.loadtxt(args.cand_terms_path, 'str'))
 else:
-    print('Using default candidate terms ...')
+    print('--- Using default candidate terms ...\n')
+    args.term_strings = pickle.load(open('../data/mappings/term_string_mapping.pkl', 'rb'))
+    args.all_iv_terms = pickle.load(
+        open('../data/sym_data/all_iv_terms_per{0}_{1}.pkl'.format(args.per, args.days), 'rb'))
     cand_terms = args.all_iv_terms
 
 
+print('Begin querying: \n')
 while True:
     query = str(input('Input your query (Press \'exit\' to exit): '))
     if query == 'exit':
         exit()
+
+    start = time.time()
     scores = utils.get_ranking_score(model, query, cand_terms, args)
     sorted_rank_idx = np.argsort(scores)[::-1]
-    sorted_ids = np.array(args.all_iv_terms)[sorted_rank_idx]
-    print('Top ranking:')
-    print('SurfCon: {0}'.format([args.term_strings[args.all_iv_terms[x]] for x in sorted_rank_idx[:args.num_results]]))
+    end = time.time()
+    print('Searching {} candidate terms by {:.5} seconds\n'.format(len(cand_terms), end - start))
+
+    if args.cand_terms_path:
+        synonyms = [cand_terms[x] for x in sorted_rank_idx[:args.num_results]]
+    else:
+        synonyms = [args.term_strings[cand_terms[x]] for x in sorted_rank_idx[:args.num_results]]
+
+    print('Top ranking Terms:')
+    for idx, term in enumerate(synonyms):
+        print('{}\t{}'.format(idx+1, term))
+    print('\n')
 
 
 
