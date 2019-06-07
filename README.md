@@ -2,17 +2,18 @@
 Implementation of SurfCon model for Paper "[SurfCon: Synonym Discovery on Privacy-Aware Clinical Data](https://github.com/yzabc007/SurfCon/)", which studies Synonym Discovery on Privacy-Aware Clinical Data.
 
 ## 1. Introduction
-This repository is the implementation for the SurfCon model which utilizes the surface form and global context information to mine synonyms for medical terms extracted from Electronic Medical Records (EMRs).
+This repository is the implementation for the SurfCon model that utilizes the surface form and global context information to mine synonyms for medical terms extracted from clinical texts, such as Electronic Medical Records (EMRs).
 
-The surface form information provides connection between medical terms in the surface form level. Not surprisingly, surface form information is very important in medical domain. For example, term **hypocupremia** is the synonym of **copper deficiency** in which _hypo_ means _deficiency_, _cupre_ means _copper_ and also _mia_ is connected with _blood_. Thus, we design a bi-level surface form encoder to capture the information in both character and word levels of the medical terms.
+The surface form information provides connections between medical terms in the surface form level. Not surprisingly, the surface form information is critical in the medical domain. For example, term **hypocupremia** is the synonym of **copper deficiency** in which _hypo_ means _deficiency_, _cupre_ means _copper_ and _mia_ is connected with _blood_. Inspired by such intuition, we design a bi-level surface form encoder to capture the information in both character and word levels of the medical terms.
 
-The global context information provides the semantic information between medical terms. To deal with OOV problem (e.g., query terms may not show up in existing data), we leverage an inductive context prediction module to predict close neighbors for terms and aggregate the predicted neighbors to calculate the context score. 
+Moreover, the global context information provides semantic information between medical terms. To deal with OOV problem (e.g., query terms do not show up in existing data), we leverage an inductive context prediction module to predict the close neighbors for terms and aggregate the predicted neighbors to calculate a context score between terms. 
+
+Please refer to our paper for more detailed information.
 
 ## 2. Dataset
 The dataset used in current experiments contains medical term-term co-occurrence graphs extracted from EMRs. The dataset can be downloaded from the original paper, [Building the graph of medicine from millions of clinical narratives](https://datadryad.org/resource/doi:10.5061/dryad.jp917)
 
 More importantly, you can apply our model to your own data. Our model and problem setting can be extended to any other text corpus with the privacy concerns as long as a co-occurrence graph is provided.
-
 
 
 
