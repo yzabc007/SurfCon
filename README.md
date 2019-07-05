@@ -1,5 +1,5 @@
 # SurfCon
-Implementation of SurfCon model for Paper "[SurfCon: Synonym Discovery on Privacy-Aware Clinical Data](https://github.com/yzabc007/SurfCon/)", which studies Synonym Discovery on Privacy-Aware Clinical Data.
+Implementation of SurfCon model for Paper "[SurfCon: Synonym Discovery on Privacy-Aware Clinical Data](https://arxiv.org/abs/1906.09285)", which studies Synonym Discovery on Privacy-Aware Clinical Data.
 
 ## 1. Introduction
 This repository is the implementation for the SurfCon model that utilizes the surface form and global context information to mine synonyms for medical terms extracted from clinical texts, such as Electronic Medical Records (EMRs).
