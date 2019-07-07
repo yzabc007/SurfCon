@@ -89,7 +89,7 @@ torch.manual_seed(args.random_seed)
 args.neighbors = []
 
 args.cuda = torch.cuda.is_available()
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # data pre-processing
 args.restore_para_file = './saved_models/{0}_{1}_pretrain_model_dict.pkl'.format(args.per, args.days)
@@ -126,7 +126,7 @@ if args.cuda:
 print(model)
 # print([name for name, p in model.named_parameters()])
 
-model.load_state_dict(torch.load(args.rank_model_path), strict=True)
+model.load_state_dict(torch.load(args.rank_model_path, map_location=args.device), strict=True)
 model.eval()
 print('Pretrained model loaded!')
 
