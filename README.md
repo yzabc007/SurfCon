@@ -25,7 +25,7 @@ More importantly, you can apply our model to your own data. Our model and proble
 
 2. The pretrained embeddings can be downloaded here: [GloVe](http://nlp.stanford.edu/data/glove.6B.zip), [charNgram](http://www.logos.t.u-tokyo.ac.jp/~hassy/publications/arxiv2016jmt/jmt_pre-trained_embeddings.tar.gz), [node features](https://drive.google.com/file/d/1nKXDppoSsT6uHCl0yG_zlrC4QFyCyu41/view?usp=sharing).
 
-3. If you have your own terms, please reivse the argument `--cand_terms_path` in `test_surfcon.sh`.
+3. If you want to test quickly with existing medicla terms, please refer to [here](https://drive.google.com/file/d/1RN0x45dnMAkRKQWAwIqoz2qNL_3hfsQv/view?usp=sharing). If you have your own terms, please reivse the argument `--cand_terms_path` in `test_surfcon.sh` with a text file (one term per line).
 
 4. Testing our pretrained SurfCon model to discover synonyms:
 
