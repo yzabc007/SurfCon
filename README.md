@@ -1,5 +1,5 @@
 # SurfCon
-Please refer to our [another repository](https://github.com/zhenwang9102/SurfCon), for the latest update of SurfCon model for Paper "[SurfCon: Synonym Discovery on Privacy-Aware Clinical Data](https://arxiv.org/abs/1906.09285)", which studies Synonym Discovery on Privacy-Aware Clinical Data
+Please refer to the [another repository](https://github.com/zhenwang9102/SurfCon), for the latest update of SurfCon model for Paper "[SurfCon: Synonym Discovery on Privacy-Aware Clinical Data](https://arxiv.org/abs/1906.09285)", which studies Synonym Discovery on Privacy-Aware Clinical Data
 
 ```
 @inproceedings{wang2019surfcon,
