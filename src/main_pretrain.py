@@ -74,8 +74,9 @@ def make_idx_term_ns(dataset, args):
 
         # context terms
         for context in cur_sample[1]:
-            cur_dict['context'] = args.node_to_id[context[0]]
-            data.append(cur_dict)
+            new_dict = dict(cur_dict)
+            new_dict['context'] = args.node_to_id[context[0]]
+            data.append(new_dict)
 
     return data
 
